@@ -1,1 +1,129 @@
-T1IR
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPFO Wage Ceiling Impact Calculator</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 5px; }
+        button { padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        .results { margin-top: 20px; }
+        .chart-container { margin-top: 30px; height: 300px; width: 100%; }
+    </style>
+</head>
+<body>
+    <h1>EPFO Wage Ceiling Impact Calculator</h1>
+    
+    <div class="input-group">
+        <label for="salary">Monthly Salary (Rs):</label>
+        <input type="number" id="salary" value="21000" min="15000">
+    </div>
+    
+    <div class="input-group">
+        <label for="tenure">Years of Service:</label>
+        <input type="number" id="tenure" value="20" min="1" max="35">
+    </div>
+    
+    <button onclick="calculate()">Calculate Impact</button>
+    
+    <div class="results" id="results"></div>
+    
+    <div id="chartContainers"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const chartConfigs = [
+            { id: 'pensionChart', label: 'Monthly Pension (Rs)' },
+            { id: 'contributionChart', label: 'Monthly Contribution (Rs)' }
+        ];
+
+        function calculate() {
+            const salary = parseFloat(document.getElementById('salary').value) || 0;
+            const tenure = parseFloat(document.getElementById('tenure').value) || 0;
+            
+            if (salary < 15000 || tenure < 1 || tenure > 35) {
+                alert("Please enter valid values. Salary should be at least 15000 and tenure should be between 1 and 35 years.");
+                return;
+            }
+            
+            const currentCeiling = 15000;
+            const proposedCeiling = 21000;
+            
+            const currentPension = calculatePension(salary, tenure, currentCeiling);
+            const proposedPension = calculatePension(salary, tenure, proposedCeiling);
+            
+            const currentContribution = calculateContribution(salary, currentCeiling);
+            const proposedContribution = calculateContribution(salary, proposedCeiling);
+            
+            const takeHomeImpact = proposedContribution - currentContribution;
+            
+            displayResults(currentPension, proposedPension, currentContribution, proposedContribution, takeHomeImpact);
+            updateCharts(currentPension, proposedPension, currentContribution, proposedContribution);
+        }
+        
+        function calculatePension(salary, tenure, ceiling) {
+            return (Math.min(salary, ceiling) * Math.min(tenure, 35)) / 70;
+        }
+        
+        function calculateContribution(salary, ceiling) {
+            return Math.min(salary, ceiling) * 0.0833;
+        }
+        
+        function displayResults(currentPension, proposedPension, currentContribution, proposedContribution, takeHomeImpact) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h2>Results:</h2>
+                <p>Current Monthly Pension: Rs ${currentPension.toFixed(2)}</p>
+                <p>Proposed Monthly Pension: Rs ${proposedPension.toFixed(2)}</p>
+                <p>Current Monthly Contribution: Rs ${currentContribution.toFixed(2)}</p>
+                <p>Proposed Monthly Contribution: Rs ${proposedContribution.toFixed(2)}</p>
+                <p>Monthly Impact on Take-Home Salary: Rs ${takeHomeImpact.toFixed(2)}</p>
+            `;
+        }
+        
+        function updateCharts(currentPension, proposedPension, currentContribution, proposedContribution) {
+            const chartContainers = document.getElementById('chartContainers');
+            chartContainers.innerHTML = ''; // Clear all existing charts
+
+            chartConfigs.forEach((config, index) => {
+                const containerDiv = document.createElement('div');
+                containerDiv.className = 'chart-container';
+                const canvas = document.createElement('canvas');
+                canvas.id = config.id;
+                containerDiv.appendChild(canvas);
+                chartContainers.appendChild(containerDiv);
+
+                const ctx = canvas.getContext('2d');
+                const data = index === 0 ? [currentPension, proposedPension] : [currentContribution, proposedContribution];
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Current', 'Proposed'],
+                        datasets: [{
+                            label: config.label,
+                            data: data,
+                            backgroundColor: ['#007bff', '#28a745']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Initial calculation
+        document.addEventListener('DOMContentLoaded', calculate);
+    </script>
+</body>
+</html>

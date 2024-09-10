@@ -1,164 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>THEMIS & ARTEMIS Mission Visualization</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.3.0/d3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPFO Wage Ceiling Impact Calculator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #000;
-        color: #fff;
-        overflow: hidden;
-      }
-      #visualization {
-        width: 100vw;
-        height: 100vh;
-        position: relative;
-      }
-      .orbit {
-        stroke: #fff;
-        fill: none;
-        stroke-width: 1;
-      }
-      .probe {
-        fill: #ffd700;
-        stroke: #000;
-        stroke-width: 0.5;
-      }
-      .info-box {
-        position: absolute;
-        background: rgba(0, 0, 0, 0.8);
-        padding: 10px;
-        border-radius: 5px;
-        display: none;
-      }
-      .phase-button {
-        background-color: #4caf50; /* Green */
-        border: none;
-        color: white;
-        padding: 15px 32px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        margin: 4px 2px;
-        cursor: pointer;
-      }
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: auto; padding: 20px; }
+        .input-section, .result-section { margin: 20px 0; }
+        .chart-container { width: 100%; max-width: 600px; margin: 20px auto; }
+        input[type=number], input[type=range] { width: 100%; max-width: 300px; }
+        .highlight { color: #2196F3; font-weight: bold; }
     </style>
-  </head>
-  <body>
-    <div id="visualization"></div>
-    <div id="info" class="info-box"></div>
-    <div style="position: absolute; bottom: 10px; left: 10px">
-      <button class="phase-button" onclick="showPhase('Tail')">
-        Tail Phase
-      </button>
-      <button class="phase-button" onclick="showPhase('Dawn')">
-        Dawn Phase
-      </button>
-      <button class="phase-button" onclick="showPhase('Dayside')">
-        Dayside Phase
-      </button>
-      <button class="phase-button" onclick="showPhase('Dusk')">
-        Dusk Phase
-      </button>
+</head>
+<body>
+    <h1>EPFO Wage Ceiling Impact Analysis</h1>
+    <div class="input-section">
+        <label for="salary">Monthly Salary (Rs):</label>
+        <input type="range" id="salary" min="15000" max="50000" value="21000" oninput="this.nextElementSibling.value = this.value">
+        <output>21000</output>
+        <br>
+        <label for="tenure">Years of Service:</label>
+        <input type="number" id="tenure" min="1" max="35" value="20">
+    </div>
+    <button onclick="calculate()">Calculate Impact</button>
+    <div class="result-section" id="results"></div>
+    <div class="chart-container">
+        <canvas id="myChart"></canvas>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-      const width = window.innerWidth,
-        height = window.innerHeight;
-      const svg = d3
-        .select('#visualization')
-        .append('svg')
-        .attr('width', width)
-        .attr('height', height);
+    function calculate() {
+        const salary = parseFloat($('#salary').val());
+        const tenure = parseFloat($('#tenure').val());
+        const currentCeiling = 15000, proposedCeiling = 21000;
+        const maxService = 35;
 
-      const phases = {
-        Tail: { apogee: 12, sector: 'nightside', mmsPosition: 'dawn' },
-        Dawn: { apogee: 12, sector: 'dawnside', mmsPosition: 'dayside' },
-        Dayside: { apogee: 12, sector: 'dayside', mmsPosition: 'dusk' },
-        Dusk: { apogee: 13, sector: 'duskside', mmsPosition: 'tail' },
-      };
+        // Calculate Pension
+        const calcPension = (ceiling) => Math.min(ceiling, salary) * Math.min(tenure, maxService) / 70;
 
-      function drawOrbits(phase) {
-        svg.selectAll('*').remove();
-        const phaseData = phases[phase];
-        const scale = d3
-          .scaleLinear()
-          .domain([0, 30])
-          .range([0, height / 2 - 50]);
-        const center = { x: width / 2, y: height / 2 };
+        const currentPension = calcPension(currentCeiling);
+        const proposedPension = calcPension(proposedCeiling);
 
-        // Earth
-        svg
-          .append('circle')
-          .attr('cx', center.x)
-          .attr('cy', center.y)
-          .attr('r', 20)
-          .attr('fill', 'blue');
+        // Calculate Contributions
+        const currentEPS = Math.min(currentCeiling, salary) * 0.0833;
+        const proposedEPS = Math.min(proposedCeiling, salary) * 0.0833;
 
-        // Draw THEMIS orbits
-        for (let i = 0; i < 3; i++) {
-          const r = scale(phaseData.apogee + i * 0.5);
-          svg
-            .append('ellipse')
-            .attr('class', 'orbit')
-            .attr('cx', center.x)
-            .attr('cy', center.y)
-            .attr('rx', r)
-            .attr('ry', r * 0.5)
-            .attr('transform', `rotate(${i * 30}, ${center.x}, ${center.y})`);
+        // Impact on take-home salary (simplified)
+        const takeHomeImpact = (proposedEPS - currentEPS) * 12; // yearly impact
 
-          // Probe position
-          svg
-            .append('circle')
-            .attr('class', 'probe')
-            .attr('cx', center.x + r * Math.cos((i * Math.PI) / 6))
-            .attr('cy', center.y + r * 0.5 * Math.sin((i * Math.PI) / 6))
-            .attr('r', 5)
-            .on('mouseover', function () {
-              showInfo(phase, i);
-            })
-            .on('mouseout', hideInfo);
-        }
+        const resultsHTML = `
+            <h2>Results</h2>
+            <p><span class="highlight">Current Pension:</span> Rs ${currentPension.toFixed(2)}</p>
+            <p><span class="highlight">Proposed Pension:</span> Rs ${proposedPension.toFixed(2)}</p>
+            <p><span class="highlight">Yearly EPS Contribution Increase:</span> Rs ${((proposedEPS - currentEPS) * 12).toFixed(2)}</p>
+            <p><span class="highlight">Impact on Take-Home Salary (Yearly):</span> -Rs ${takeHomeImpact.toFixed(2)}</p>
+        `;
 
-        // MMS position indicator
-        svg
-          .append('text')
-          .attr('x', width - 100)
-          .attr('y', 50)
-          .text(`MMS: ${phaseData.mmsPosition} sector`)
-          .attr('fill', 'white');
-      }
+        $('#results').html(resultsHTML);
 
-      function showInfo(phase, probeIndex) {
-        d3.select('#info')
-          .style('display', 'block')
-          .html(
-            `Phase: ${phase}<br>Probe ${probeIndex + 3}: Studying ${
-              phaseData.sector
-            } interactions`
-          )
-          .style('left', d3.event.pageX + 10 + 'px')
-          .style('top', d3.event.pageY - 28 + 'px');
-      }
-
-      function hideInfo() {
-        d3.select('#info').style('display', 'none');
-      }
-
-      function showPhase(phase) {
-        drawOrbits(phase);
-      }
-
-      // Initial draw
-      drawOrbits('Tail');
+        // Chart Data
+        const ctx = document.getElementById('myChart').getContext('2d');
+        if(window.myChart) window.myChart.destroy(); // Clear previous chart
+        window.myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Current', 'Proposed'],
+                datasets: [{
+                    label: 'Pension Amount (Rs)',
+                    data: [currentPension, proposedPension],
+                    backgroundColor: ['rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)'],
+                    borderColor: ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
     </script>
-  </body>
+</body>
 </html>

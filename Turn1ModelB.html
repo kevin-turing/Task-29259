@@ -1,1 +1,109 @@
-T1MB
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPFO Wage Ceiling Impact Visualization</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 900px; }
+        .card { margin: 20px 0; }
+        canvas { max-width: 100%; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="mt-5">Impact of EPFO Wage Ceiling Increase</h1>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Calculate Your Benefits</h5>
+            <div class="mb-3">
+                <label for="salary">Monthly Salary (Rs):</label>
+                <input type="number" id="salary" class="form-control" value="21000">
+            </div>
+            <div class="mb-3">
+                <label for="tenure">Years of Service:</label>
+                <input type="number" id="tenure" class="form-control" value="35">
+            </div>
+            <button onclick="updateCalculations()" class="btn btn-primary">Calculate</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Contribution & Pension Comparison</h5>
+            <p>Current Monthly Pension: <span id="currentPension"></span></p>
+            <p>Proposed Monthly Pension: <span id="proposedPension"></span></p>
+            <p>Employer's EPS Contribution: <span id="employerContribution"></span></p>
+            <p>Impact on Take-home Salary: <span id="takeHomeImpact"></span></p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <canvas id="pensionChart"></canvas>
+        </div>
+        <div class="col-md-6">
+            <canvas id="contributionChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function updateCalculations() {
+    const salary = document.getElementById('salary').value;
+    const tenure = document.getElementById('tenure').value;
+    const currentCeiling = 15000;
+    const proposedCeiling = 21000;
+    const maxService = 35;
+
+    // Pension Calculation
+    const currentPension = (Math.min(salary, currentCeiling) * Math.min(tenure, maxService)) / 70;
+    const proposedPension = (Math.min(salary, proposedCeiling) * Math.min(tenure, maxService)) / 70;
+
+    document.getElementById('currentPension').textContent = `Rs ${currentPension.toFixed(2)}`;
+    document.getElementById('proposedPension').textContent = `Rs ${proposedPension.toFixed(2)}`;
+
+    // Employer Contribution to EPS
+    const employerContribution = proposedCeiling * 0.0833;
+    document.getElementById('employerContribution').textContent = `Rs ${employerContribution.toFixed(2)}`;
+
+    // Impact on Take-home (simplified)
+    const takeHomeImpact = (salary > currentCeiling) ? (proposedCeiling - currentCeiling) * 0.12 : 0;
+    document.getElementById('takeHomeImpact').textContent = `Reduction by Rs ${takeHomeImpact.toFixed(2)}`;
+
+    // Update Charts
+    updateChart('pensionChart', ['Current', 'Proposed'], [currentPension, proposedPension], 'Pension Amount (Rs)');
+    updateChart('contributionChart', ['Employer EPS'], [employerContribution], 'Monthly Contribution (Rs)');
+}
+
+function updateChart(canvasId, labels, data, labelString) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: labelString,
+                data: data,
+                backgroundColor: ['rgba(54, 162, 235, 0.2)', 'rgba(255, 99, 132, 0.2)'],
+                borderColor: ['rgb(54, 162, 235)', 'rgb(255, 99, 132)'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+updateCalculations();
+</script>
+</body>
+</html>
