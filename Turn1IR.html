@@ -2,55 +2,60 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPFO Wage Ceiling Impact Calculator</title>
+    <!-- Include Bootstrap CSS for styling -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input { width: 100%; padding: 5px; }
-        button { padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
-        .results { margin-top: 20px; }
-        .chart-container { margin-top: 30px; height: 300px; width: 100%; }
+        body { max-width: 800px; margin: 20px auto; padding: 20px; }
+        .chart-container { position: relative; height: 300px; width: 100%; margin-top: 30px; }
     </style>
 </head>
 <body>
-    <h1>EPFO Wage Ceiling Impact Calculator</h1>
+    <h1 class="mb-4 text-center">EPFO Wage Ceiling Impact Calculator</h1>
     
-    <div class="input-group">
-        <label for="salary">Monthly Salary (Rs):</label>
-        <input type="number" id="salary" value="21000" min="15000">
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="salary" class="form-label">Monthly Salary (Rs):</label>
+                <input type="number" class="form-control" id="salary" value="21000" min="0">
+            </div>
+            <div class="mb-3">
+                <label for="tenure" class="form-label">Years of Service:</label>
+                <input type="number" class="form-control" id="tenure" value="20" min="1" max="35">
+            </div>
+            <button class="btn btn-primary" onclick="calculate()">Calculate Impact</button>
+        </div>
     </div>
     
-    <div class="input-group">
-        <label for="tenure">Years of Service:</label>
-        <input type="number" id="tenure" value="20" min="1" max="35">
-    </div>
-    
-    <button onclick="calculate()">Calculate Impact</button>
-    
-    <div class="results" id="results"></div>
-    
+    <div id="results"></div>
     <div id="chartContainers"></div>
 
+    <!-- Include Chart.js and Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     <script>
         const chartConfigs = [
-            { id: 'pensionChart', label: 'Monthly Pension (Rs)' },
-            { id: 'contributionChart', label: 'Monthly Contribution (Rs)' }
+            { id: 'pensionChart', label: "Monthly Pension (Rs)", title: "Monthly Pension Comparison" },
+            { id: 'contributionChart', label: "Employer's Monthly Contribution (Rs)", title: "Employer's Monthly Contribution Comparison" }
         ];
 
         function calculate() {
-            const salary = parseFloat(document.getElementById('salary').value) || 0;
+            const salaryInput = document.getElementById('salary');
+            const salary = parseFloat(salaryInput.value) || 0;
             const tenure = parseFloat(document.getElementById('tenure').value) || 0;
             
-            if (salary < 15000 || tenure < 1 || tenure > 35) {
-                alert("Please enter valid values. Salary should be at least 15000 and tenure should be between 1 and 35 years.");
+            if (salary <= 0 || tenure < 1 || tenure > 35) {
+                alert("Please enter valid values. Salary should be a positive number and tenure should be between 1 and 35 years.");
                 return;
             }
             
             const currentCeiling = 15000;
             const proposedCeiling = 21000;
+            const maxCeiling = proposedCeiling; // Maximum pensionable salary
+
+            if (salary > maxCeiling) {
+                alert(`The maximum pensionable salary is Rs ${maxCeiling}. Calculations will be based on Rs ${maxCeiling}.`);
+            }
             
             const currentPension = calculatePension(salary, tenure, currentCeiling);
             const proposedPension = calculatePension(salary, tenure, proposedCeiling);
@@ -60,7 +65,7 @@
             
             const takeHomeImpact = proposedContribution - currentContribution;
             
-            displayResults(currentPension, proposedPension, currentContribution, proposedContribution, takeHomeImpact);
+            displayResults(currentPension, proposedPension, currentContribution, proposedContribution, takeHomeImpact, salary);
             updateCharts(currentPension, proposedPension, currentContribution, proposedContribution);
         }
         
@@ -72,15 +77,20 @@
             return Math.min(salary, ceiling) * 0.0833;
         }
         
-        function displayResults(currentPension, proposedPension, currentContribution, proposedContribution, takeHomeImpact) {
+        function displayResults(currentPension, proposedPension, currentContribution, proposedContribution, takeHomeImpact, salary) {
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = `
-                <h2>Results:</h2>
-                <p>Current Monthly Pension: Rs ${currentPension.toFixed(2)}</p>
-                <p>Proposed Monthly Pension: Rs ${proposedPension.toFixed(2)}</p>
-                <p>Current Monthly Contribution: Rs ${currentContribution.toFixed(2)}</p>
-                <p>Proposed Monthly Contribution: Rs ${proposedContribution.toFixed(2)}</p>
-                <p>Monthly Impact on Take-Home Salary: Rs ${takeHomeImpact.toFixed(2)}</p>
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h2 class="card-title">Results:</h2>
+                        <p><strong>Your Entered Monthly Salary:</strong> Rs ${salary.toFixed(2)}</p>
+                        <p><strong>Current Monthly Pension:</strong> Rs ${currentPension.toFixed(2)}</p>
+                        <p><strong>Proposed Monthly Pension:</strong> Rs ${proposedPension.toFixed(2)}</p>
+                        <p><strong>Current Employer's Monthly Contribution:</strong> Rs ${currentContribution.toFixed(2)}</p>
+                        <p><strong>Proposed Employer's Monthly Contribution:</strong> Rs ${proposedContribution.toFixed(2)}</p>
+                        <p><strong>Monthly Impact on Take-Home Salary:</strong> Rs ${takeHomeImpact.toFixed(2)}</p>
+                    </div>
+                </div>
             `;
         }
         
@@ -90,10 +100,13 @@
 
             chartConfigs.forEach((config, index) => {
                 const containerDiv = document.createElement('div');
-                containerDiv.className = 'chart-container';
+                containerDiv.className = 'card mb-4';
+                const canvasDiv = document.createElement('div');
+                canvasDiv.className = 'chart-container';
                 const canvas = document.createElement('canvas');
                 canvas.id = config.id;
-                containerDiv.appendChild(canvas);
+                canvasDiv.appendChild(canvas);
+                containerDiv.appendChild(canvasDiv);
                 chartContainers.appendChild(containerDiv);
 
                 const ctx = canvas.getContext('2d');
@@ -112,9 +125,40 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: config.title,
+                                font: { size: 18 }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += 'Rs ' + context.parsed.y.toFixed(2);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
                         scales: {
                             y: {
-                                beginAtZero: true
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: config.label
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Scenario'
+                                }
                             }
                         }
                     }
